@@ -113,7 +113,6 @@
       filter: grayscale(100%) opacity(0.3);
     }
     
-    /* 🌟 쓰레기통 내 날짜 뱃지 (클릭 시 영구삭제 트리거) */
     .badge-date-trash {
       background-color: #e0d0cc; 
       border: 1.5px solid #a89491; 
@@ -190,56 +189,64 @@
       display: flex; flex-direction: column;
       align-items: center; justify-content: center;
       overflow: hidden;
+      padding: 0 8px;
     }
 
-    /* 바코드 카드 */
+    /* 🌟 바코드 카드 (잘림 없는 최적화 컨테이너) */
     .barcode-display-card {
-      width: 100vw;
+      width: 100%;
+      max-width: 420px;
       background: #ffffff;
-      padding: 30px 4px 20px;
+      border-radius: 16px;
+      padding: 24px 12px 18px;
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      box-shadow: 0 0 40px rgba(0,0,0,0.9);
+      box-shadow: 0 8px 32px rgba(0,0,0,0.85);
+      overflow: hidden;
     }
 
+    /* SVG 바코드 잘림 방지 (fit-content + viewBox 기반) */
     #barcodeSvg {
       width: 100% !important;
-      height: 210px !important;
+      max-width: 100%;
+      height: 150px !important;
       display: block;
     }
 
+    /* 캔버스 */
     #barcodeCanvas {
       width: 100% !important;
+      max-width: 100%;
       height: auto !important;
-      max-height: 300px;
+      max-height: 200px;
       object-fit: contain;
       display: none;
-      filter: contrast(1.4) brightness(1.02);
+      filter: contrast(1.3) brightness(1.02);
     }
 
+    /* 단순 번호 텍스트 (클릭/복사 기능 제거) */
     .barcode-num-text {
       margin-top: 14px;
-      font-size: 26px;
+      font-size: 20px;
       font-weight: 900;
-      letter-spacing: 4px;
-      color: #000;
+      letter-spacing: 3px;
+      color: #111;
       background: #f1eae6;
-      padding: 8px 24px;
-      border-radius: 10px;
-      cursor: pointer;
+      padding: 8px 18px;
+      border-radius: 8px;
       font-family: monospace, sans-serif;
       text-align: center;
-      border: 2px solid #d5c8c2;
+      border: 1.5px solid #d5c8c2;
+      user-select: text;
     }
-    .barcode-num-text:active { background: #dfd2cc; }
 
     .barcode-notice {
-      font-size: 14px; font-weight: 800; color: #2a9d8f; margin-top: 10px; text-align: center;
+      font-size: 13px; font-weight: 800; color: #2a9d8f; margin-top: 10px; text-align: center;
     }
 
-    /* 원본 전체 쿠폰 보기 */
+    /* 원본 전체 쿠폰 보기 (화면 100% 풀스크린) */
     .original-preview-box {
       position: absolute;
       inset: 0;
@@ -319,7 +326,7 @@
       display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; align-content: start;
     }
 
-    /* 🌟 커스텀 영구 삭제 확인 팝업 모달 */
+    /* 영구 삭제 확인 팝업 모달 */
     .confirm-modal-overlay {
       position: fixed; inset: 0; background: rgba(0, 0, 0, 0.65);
       display: none; justify-content: center; align-items: center;
@@ -386,7 +393,7 @@
       <div class="barcode-display-card" id="barcodeDisplayCard">
         <svg id="barcodeSvg"></svg>
         <canvas id="barcodeCanvas"></canvas>
-        <div id="barcodeNumText" class="barcode-num-text" style="display:none;" onclick="copyBarcodeNumber()" title="클릭 시 복사"></div>
+        <div id="barcodeNumText" class="barcode-num-text" style="display:none;"></div>
         <div class="barcode-notice"><i class="fa-solid fa-barcode"></i> 리더기에 바로 태그하세요</div>
       </div>
 
@@ -417,7 +424,7 @@
     <div class="trash-grid" id="trashGrid"></div>
   </div>
 
-  <!-- 🌟 영구 삭제 확인 팝업 모달 (예/아니오) -->
+  <!-- 영구 삭제 확인 팝업 모달 -->
   <div class="confirm-modal-overlay" id="confirmDeleteModal">
     <div class="confirm-card">
       <div class="confirm-title"><i class="fa-solid fa-triangle-exclamation"></i> 영구 삭제</div>
@@ -472,9 +479,8 @@
 
     let allCoupons = [];
     let selectedCouponId = null;
-    let targetDeleteId = null; // 영구 삭제 대상 docId
+    let targetDeleteId = null;
     let isShowingOriginal = false;
-    let currentRawBarcodeValue = "";
 
     function getDaysDiff(dateStr) {
       if (!dateStr) return 99999;
@@ -485,15 +491,44 @@
       return Math.ceil((target - today) / (1000 * 60 * 60 * 24));
     }
 
+    // 🌟 대폭 강화된 유효기간 날짜 파서 (모든 기프티콘 날짜 포맷 인식)
     function extractDate(text) {
-      const match = text.match(/(20\d{2}|\d{2})[-./\s년\s]*(\d{1,2})[-./\s월\s]*(\d{1,2})/);
-      if (match) {
+      if (!text) return null;
+
+      // 1. 유효기간/사용기한/만료일 키워드 근처의 날짜 우선 탐색
+      const keywordRegex = /(?:유효기간|사용기한|기한|유효|만료일|까지)[^\d\n\r]{0,10}(20\d{2}|\d{2})[-./년\s]+(\d{1,2})[-./월\s]+(\d{1,2})/i;
+      const keyMatch = text.match(keywordRegex);
+      if (keyMatch) {
+        let y = keyMatch[1];
+        if (y.length === 2) y = '20' + y;
+        const m = keyMatch[2].padStart(2, '0');
+        const d = keyMatch[3].padStart(2, '0');
+        if (parseInt(m) >= 1 && parseInt(m) <= 12 && parseInt(d) >= 1 && parseInt(d) <= 31) {
+          return `${y}-${m}-${d}`;
+        }
+      }
+
+      // 2. 일반 전체 텍스트에서 4자리/2자리 연도 날짜 탐색 (예: 2026.12.31, 26/08/25, ~2026-10-05)
+      const generalRegex = /(20\d{2}|\d{2})[-./년\s]+(\d{1,2})[-./월\s]+(\d{1,2})/g;
+      let match;
+      const candidates = [];
+
+      while ((match = generalRegex.exec(text)) !== null) {
         let y = match[1];
         if (y.length === 2) y = '20' + y;
         const m = match[2].padStart(2, '0');
         const d = match[3].padStart(2, '0');
-        return `${y}-${m}-${d}`;
+        const mm = parseInt(m), dd = parseInt(d);
+        if (mm >= 1 && mm <= 12 && dd >= 1 && dd <= 31) {
+          candidates.push(`${y}-${m}-${d}`);
+        }
       }
+
+      // 탐색된 날짜 중 유효한 미래/현재 날짜 반환
+      if (candidates.length > 0) {
+        return candidates[candidates.length - 1]; // 보통 유효기간이 하단에 위치
+      }
+
       return null;
     }
 
@@ -511,7 +546,6 @@
       return `${yy}.${mm}.${dd}`;
     }
 
-    // 🌟 30일 경과 자동 영구 삭제 검사 및 렌더링
     db.collection("coupons").onSnapshot((snapshot) => {
       allCoupons = [];
       const now = Date.now();
@@ -519,7 +553,6 @@
 
       snapshot.forEach((doc) => {
         const data = doc.data();
-        // 30일 지난 쓰레기통 항목은 백그라운드 자동 삭제
         if (data.isUsed && data.usedTimestamp && (now - data.usedTimestamp > THIRTY_DAYS_MS)) {
           db.collection("coupons").doc(doc.id).delete();
         } else {
@@ -567,14 +600,11 @@
         grid.appendChild(card);
       });
 
-      // 🌟 쓰레기통 카드 렌더링 (자동삭제 카운트다운 및 즉시삭제 뱃지 연동)
       usedCoupons.forEach(coupon => {
         const item = document.createElement('div');
         item.className = 'coupon-card used';
         
         const usedDateStr = coupon.usedDate || getTodayFormatted();
-        
-        // 30일 중 남은 일수 계산
         const usedTime = coupon.usedTimestamp || Date.now();
         const daysPassed = Math.floor((Date.now() - usedTime) / (1000 * 60 * 60 * 24));
         const daysLeft = Math.max(0, 30 - daysPassed);
@@ -661,6 +691,7 @@
       e.target.value = '';
     });
 
+    // 🌟 바코드 잘림 없는 초고화질 렌더링 함수
     async function renderUltraCleanBarcode(base64Image) {
       const img = new Image();
       img.src = base64Image;
@@ -686,22 +717,24 @@
 
       const cleanNumber = detectedValue.replace(/\D/g, '');
 
+      // [1] 바코드 숫자가 감지된 경우: 모바일 화면에 맞춰 잘림 없는 SVG 생성
       if (cleanNumber && cleanNumber.length >= 8) {
-        currentRawBarcodeValue = cleanNumber;
         svgEl.style.display = 'block';
         canvasEl.style.display = 'none';
 
         try {
+          // 화면 너비에 맞추어 막대 두께(width) 동적 계산 (잘림 방지)
+          const barWidth = cleanNumber.length > 14 ? 2.1 : 2.6;
           JsBarcode(svgEl, cleanNumber, {
             format: "CODE128",
             lineColor: "#000000",
-            width: 3.6,
-            height: 140,
+            width: barWidth,
+            height: 100,
             displayValue: false,
-            margin: 0
+            margin: 4 // 양옆 잘림 방지용 안전 마진
           });
         } catch (e) {
-          JsBarcode(svgEl, cleanNumber, { displayValue: false, margin: 0, width: 3.4, height: 135 });
+          JsBarcode(svgEl, cleanNumber, { displayValue: false, margin: 4, width: 2.2, height: 95 });
         }
 
         numTextEl.innerText = cleanNumber.replace(/(\d{4})(?=\d)/g, '$1 ');
@@ -709,6 +742,7 @@
         return;
       }
 
+      // [2] 숫자 미인식 시: 고해상도 종횡비 유지 캔버스 크롭
       svgEl.style.display = 'none';
       canvasEl.style.display = 'block';
 
@@ -717,10 +751,10 @@
 
       let cropX, cropY, cropW, cropH;
       if (box) {
-        cropX = Math.max(0, box.x - 8);
-        cropY = Math.max(0, box.y - 8);
-        cropW = Math.min(nw - cropX, box.width + 16);
-        cropH = Math.min(nh - cropY, box.height * 1.55);
+        cropX = Math.max(0, box.x - 6);
+        cropY = Math.max(0, box.y - 6);
+        cropW = Math.min(nw - cropX, box.width + 12);
+        cropH = Math.min(nh - cropY, box.height * 1.5);
       } else {
         cropX = 0;
         cropY = nh * 0.35;
@@ -738,12 +772,6 @@
 
       ctx.drawImage(img, cropX, cropY, cropW, cropH, 0, 0, cropW, cropH);
       numTextEl.style.display = 'none';
-    }
-
-    function copyBarcodeNumber() {
-      if (!currentRawBarcodeValue) return;
-      navigator.clipboard.writeText(currentRawBarcodeValue);
-      alert(`바코드 번호가 복사되었습니다:\n${currentRawBarcodeValue}`);
     }
 
     async function openDetail(id) {
@@ -772,7 +800,7 @@
       if (!isShowingOriginal) {
         barcodeCard.style.display = 'none';
         origBox.style.display = 'flex';
-        btn.innerHTML = `<i class="fa-solid fa-barcode"></i> 바코드만 크게 보기`;
+        btn.innerHTML = `<i class="fa-solid fa-barcode"></i> 바코드만 보기`;
         isShowingOriginal = true;
       } else {
         barcodeCard.style.display = 'flex';
@@ -827,7 +855,6 @@
       });
     }
 
-    // 🌟 영구 삭제 팝업 트리거 및 승인 로직
     function promptPermanentDelete(id, event) {
       if (event) event.stopPropagation();
       targetDeleteId = id;
