@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
   <title>공유 쿠폰함</title>
-  <!-- OCR, 아이콘, Pretendard 폰트 (새 바코드 생성 라이브러리 완전 삭제) -->
+  <!-- OCR, 아이콘, Pretendard 폰트 -->
   <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
   <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
@@ -173,7 +173,7 @@
     }
     .btn-restore:active { background: #4a3e3d; }
 
-    /* 모달: 사진 자체 풀스크린 뷰어 */
+    /* 모달 */
     .modal {
       display: none; position: fixed; inset: 0; 
       background: #000000;
@@ -194,7 +194,7 @@
       background: #000000;
     }
 
-    /* 🌟 사용자가 올린 실제 사진 엘리먼트 (트랜스폼으로만 줌인) */
+    /* 원본 사진 엘리먼트 */
     #modalPhoto {
       max-width: 100%;
       max-height: 100%;
@@ -313,7 +313,7 @@
       <i class="fa-regular fa-trash-can"></i>
     </button>
     <span class="header-title">쿠폰함</span>
-    <label class="header-btn" title="쿠폰 추가">
+    <label class="header-btn" title="쿠폰 추가" for="fileInput">
       <i class="fa-solid fa-plus"></i>
       <input type="file" id="fileInput" accept="image/*" multiple style="display: none;" />
     </label>
@@ -328,7 +328,6 @@
       <i class="fa-solid fa-xmark"></i>
     </button>
     
-    <!-- 사진 뷰포트 (오직 원본 사진 하나만 들어감) -->
     <div class="photo-viewport" id="photoViewport">
       <img id="modalPhoto" src="" alt="쿠폰 사진" />
     </div>
@@ -373,7 +372,7 @@
   </div>
 
   <script>
-    const GROUP_PIN = "1234";
+    const GROUP_PIN = "0228";
 
     function checkPin() {
       const input = document.getElementById('pinInput').value;
@@ -423,11 +422,9 @@
       return Math.ceil((target - today) / (1000 * 60 * 60 * 24));
     }
 
-    // 🌟 강화된 다중 포맷 유효기간 추출 엔진
     function extractDate(text) {
       if (!text) return null;
 
-      // 1. 유효기간/기한 키워드 근처 날짜 탐색 (예: 유효기간 ~ 2026.12.31, 26/08/25 까지)
       const keywordRegex = /(?:유효기간|사용기한|기한|유효|만료일|만료|까지|교환유효)[^\d\r\n]{0,12}(20\d{2}|\d{2})[\s.\-\/년]+(\d{1,2})[\s.\-\/월]+(\d{1,2})/i;
       const keyMatch = text.match(keywordRegex);
       if (keyMatch) {
@@ -440,7 +437,6 @@
         }
       }
 
-      // 2. 일반 구분자 날짜 탐색 (예: 2026.12.31, 2026-08-30, 26/11/05 등)
       const generalRegex = /(20\d{2}|\d{2})[\s.\-\/년]+(\d{1,2})[\s.\-\/월]+(\d{1,2})/g;
       let match;
       const foundList = [];
@@ -456,7 +452,6 @@
         }
       }
 
-      // 3. 8자리 연속 숫자 탐색 (예: 20261231)
       const digit8Regex = /(20\d{2})(\d{2})(\d{2})/g;
       while ((match = digit8Regex.exec(text)) !== null) {
         const y = match[1], m = match[2], d = match[3];
@@ -467,7 +462,7 @@
       }
 
       if (foundList.length > 0) {
-        return foundList[foundList.length - 1]; // 쿠폰 하단에 적힌 만료일을 우선 채택
+        return foundList[foundList.length - 1];
       }
       return null;
     }
@@ -566,7 +561,6 @@
       });
     }
 
-    // 🌟 OCR 해상도를 위해 고해상도 보존 압축
     function compressImage(file) {
       return new Promise((resolve) => {
         const reader = new FileReader();
@@ -576,7 +570,7 @@
             const canvas = document.createElement('canvas');
             let width = img.width;
             let height = img.height;
-            const maxDimension = 1600; // 글자 인식을 위해 해상도 상향
+            const maxDimension = 1600;
 
             if (width > height && width > maxDimension) {
               height *= maxDimension / width;
@@ -598,8 +592,11 @@
       });
     }
 
-    document.getElementById('fileInput').addEventListener('change', async (e) => {
+    // 🌟 파일 추가 누락 방지 최적화 (이벤트 분리)
+    const fileInput = document.getElementById('fileInput');
+    fileInput.addEventListener('change', async (e) => {
       const files = Array.from(e.target.files).slice(0, 10);
+      fileInput.value = ''; // 즉시 초기화하여 다음 번 클릭 시 무조건 반응하도록 설정
       if (!files.length) return;
 
       const loading = document.getElementById('loading');
@@ -629,10 +626,66 @@
       }
 
       loading.style.display = 'none';
-      e.target.value = '';
     });
 
-    // 🌟 원본 사진 자체를 줌인하는 좌표/배율 계산
+    // 🌟 픽셀 줄무늬 밀집도 분석 엔진 (어떤 쿠폰이든 바코드 Y위치를 정확히 스캔)
+    function findBarcodePositionFallback(imgEl) {
+      const nw = imgEl.naturalWidth || 800;
+      const nh = imgEl.naturalHeight || 1200;
+
+      const offCanvas = document.createElement('canvas');
+      offCanvas.width = nw;
+      offCanvas.height = nh;
+      const ctx = offCanvas.getContext('2d');
+      ctx.drawImage(imgEl, 0, 0);
+
+      const stepY = 4;
+      const rows = Math.floor(nh / stepY);
+      const rowScores = new Array(rows).fill(0);
+
+      try {
+        const imgData = ctx.getImageData(0, 0, nw, nh).data;
+        for (let r = 0; r < rows; r++) {
+          const y = r * stepY;
+          let transitions = 0;
+          let prevDark = null;
+
+          for (let x = 0; x < nw; x += 4) {
+            const idx = (y * nw + x) * 4;
+            const lum = 0.299 * imgData[idx] + 0.587 * imgData[idx + 1] + 0.114 * imgData[idx + 2];
+            const isDark = lum < 120;
+            if (prevDark !== null && isDark !== prevDark) transitions++;
+            prevDark = isDark;
+          }
+          rowScores[r] = transitions;
+        }
+
+        let maxScore = 0;
+        let bestRow = Math.floor(rows * 0.45);
+        const win = Math.floor(rows * 0.12);
+
+        for (let i = 0; i <= rows - win; i++) {
+          let sum = 0;
+          for (let j = 0; j < win; j++) sum += rowScores[i + j];
+          if (sum > maxScore) {
+            maxScore = sum;
+            bestRow = i;
+          }
+        }
+
+        const foundY = bestRow * stepY;
+        return {
+          x: nw * 0.05,
+          y: Math.max(0, foundY - 10),
+          width: nw * 0.9,
+          height: win * stepY + 20
+        };
+      } catch (e) {
+        return { x: nw * 0.05, y: nh * 0.45, width: nw * 0.9, height: nh * 0.18 };
+      }
+    }
+
+    // 🌟 원본 사진 자체를 바코드 영역으로 정확하게 줌인
     async function calculatePhotoZoom(imgEl) {
       let box = null;
 
@@ -646,41 +699,32 @@
         } catch (e) {}
       }
 
-      const nw = imgEl.naturalWidth || 800;
-      const nh = imgEl.naturalHeight || 1200;
-
-      // 바코드 미감지 시 세로 쿠폰 기준 중앙/하단 영역 타겟
-      if (!box) {
-        box = {
-          x: nw * 0.08,
-          y: nh * 0.42,
-          width: nw * 0.84,
-          height: nh * 0.20
-        };
+      // 바코드 디텍터 실패 시 픽셀 정밀 스캐너 가동
+      if (!box || box.width < 50) {
+        box = findBarcodePositionFallback(imgEl);
       }
 
+      const nw = imgEl.naturalWidth || 800;
+      const nh = imgEl.naturalHeight || 1200;
       const vw = window.innerWidth;
       const vh = window.innerHeight;
 
-      // 이미지가 contain된 상태의 스케일
       const baseScale = Math.min(vw / nw, vh / nh);
       const renderedW = nw * baseScale;
       const renderedH = nh * baseScale;
 
       const barcodeCenterX = (box.x + box.width / 2) * baseScale;
       const barcodeCenterY = (box.y + box.height / 2) * baseScale;
-      const barcodeRenderedW = box.width * baseScale;
+      const barcodeRenderedW = Math.max(box.width * baseScale, renderedW * 0.4);
 
-      // 바코드가 화면 가로폭(vw - 16px)에 꽉 차도록 원본 사진 확대 배율 계산
-      const zoomFactor = Math.min(4.5, (vw - 16) / barcodeRenderedW);
+      // 바코드가 화면 가로폭(vw - 12px)을 가득 채우도록 배율 계산
+      const zoomFactor = Math.min(5.2, (vw - 12) / barcodeRenderedW);
 
-      // 사진 중심에서 바코드 중심까지의 이동 거리 계산
       const moveX = ((renderedW / 2) - barcodeCenterX) * zoomFactor;
       const moveY = ((renderedH / 2) - barcodeCenterY) * zoomFactor;
 
       barcodeZoomTransform = `translate(${moveX}px, ${moveY}px) scale(${zoomFactor})`;
       
-      // 사진 자체에 줌인 적용
       isZoomed = true;
       imgEl.style.transform = barcodeZoomTransform;
       document.getElementById('btnToggleView').innerHTML = `<i class="fa-solid fa-image"></i> 원본 전체 보기`;
@@ -703,18 +747,15 @@
       history.pushState({ modal: 'detail' }, '');
     }
 
-    // 🌟 원본 전체 보기 <-> 사진 바코드 위치로 줌인 토글
     function toggleZoom() {
       const photo = document.getElementById('modalPhoto');
       const btn = document.getElementById('btnToggleView');
 
       if (isZoomed) {
-        // 축소: 원본 사진 전체 보기
         photo.style.transform = 'translate(0px, 0px) scale(1)';
         btn.innerHTML = `<i class="fa-solid fa-barcode"></i> 바코드 줌인`;
         isZoomed = false;
       } else {
-        // 확대: 원본 사진을 바코드 위치로 줌인
         photo.style.transform = barcodeZoomTransform;
         btn.innerHTML = `<i class="fa-solid fa-image"></i> 원본 전체 보기`;
         isZoomed = true;
