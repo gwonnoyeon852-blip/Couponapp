@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
   <title>공유 쿠폰함</title>
   <!-- OCR, 아이콘, Pretendard 폰트 -->
   <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
@@ -22,7 +22,16 @@
       -webkit-tap-highlight-color: transparent; 
     }
     
-    body { background-color: #fdf8f5; color: #3b3030; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+    html, body {
+      width: 100%;
+      height: 100vh;
+      overflow: hidden;
+      touch-action: pan-y;
+      background-color: #fdf8f5;
+      color: #3b3030;
+      display: flex;
+      flex-direction: column;
+    }
 
     /* 비밀번호 잠금 화면 */
     #authOverlay {
@@ -37,9 +46,16 @@
     .auth-title { font-size: 20px; font-weight: 800; color: #4a3e3d; margin-bottom: 16px; }
     .auth-input {
       width: 100%; padding: 14px; font-size: 22px; text-align: center; letter-spacing: 8px;
-      border: 2px solid #d4c5c2; border-radius: 10px; margin-bottom: 18px; outline: none; background: #faf5f2;
+      border: 2px solid #d4c5c2; border-radius: 10px; margin-bottom: 12px; outline: none; background: #faf5f2;
     }
     .auth-input:focus { border-color: #4a3e3d; }
+    
+    .auth-temp-option {
+      display: flex; align-items: center; justify-content: center; gap: 6px;
+      margin-bottom: 16px; font-size: 13px; font-weight: 700; color: #6e5e5d; cursor: pointer;
+    }
+    .auth-temp-option input { accent-color: #4a3e3d; width: 16px; height: 16px; cursor: pointer; }
+
     .auth-btn {
       width: 100%; padding: 14px; background: #4a3e3d; color: #fff; border: none;
       border-radius: 10px; font-size: 17px; font-weight: 800; cursor: pointer;
@@ -49,21 +65,31 @@
     header {
       display: flex; justify-content: space-between; align-items: center;
       padding: 16px 20px; border-bottom: 2px solid #4a3e3d; background-color: #fdf8f5;
+      flex-shrink: 0;
     }
-    .header-btn { background: none; border: none; font-size: 30px; color: #4a3e3d; cursor: pointer; display: flex; align-items: center; }
+    .header-actions { display: flex; align-items: center; gap: 16px; }
+    .header-btn { background: none; border: none; font-size: 24px; color: #4a3e3d; cursor: pointer; display: flex; align-items: center; }
     .header-title { font-size: 20px; font-weight: 800; color: #4a3e3d; }
 
     /* 메인 3열 그리드 */
     main {
-      flex: 1; overflow-y: auto; padding: 16px 10px;
-      display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; align-content: start;
+      flex: 1; 
+      overflow-y: auto; 
+      padding: 12px 8px;
+      display: grid; 
+      grid-template-columns: repeat(3, minmax(0, 1fr)); 
+      gap: 8px; 
+      align-content: start;
+      touch-action: pan-y;
+      -webkit-overflow-scrolling: touch;
     }
 
     /* 쿠폰 카드 */
     .coupon-card {
       position: relative; background: #ffffff; border: 2px solid #4a3e3d; border-radius: 10px;
-      padding: 6px; display: flex; flex-direction: column; cursor: pointer;
+      padding: 5px; display: flex; flex-direction: column; cursor: pointer;
       box-shadow: 0 3px 8px rgba(74, 62, 61, 0.08); aspect-ratio: 1 / 1.58;
+      width: 100%; min-width: 0;
     }
     .card-img-box {
       position: relative; flex: 1; border: 1.5px solid #ece2de; border-radius: 6px; overflow: hidden;
@@ -73,23 +99,23 @@
     
     .card-footer {
       display: flex; justify-content: space-between; align-items: center;
-      margin-top: 7px; gap: 4px; min-height: 28px;
+      margin-top: 6px; gap: 2px; min-height: 26px;
     }
     
     .badge-date {
       background-color: transparent; 
       border: 1.8px solid #4a3e3d; 
       color: #4a3e3d;
-      font-size: 12px; 
+      font-size: 11px; 
       font-weight: 800; 
-      padding: 3px 2px; 
-      border-radius: 6px; 
+      padding: 3px 1px; 
+      border-radius: 5px; 
       flex: 1; 
       text-align: center; 
       white-space: nowrap; 
       overflow: hidden; 
       text-overflow: ellipsis;
-      letter-spacing: -0.3px;
+      letter-spacing: -0.4px;
       font-variant-numeric: tabular-nums;
       line-height: 1.2;
     }
@@ -98,7 +124,7 @@
       background-color: #d9381e; 
       border: 1.8px solid #d9381e; 
       color: #ffffff;
-      font-size: 13px; 
+      font-size: 12px; 
       font-weight: 900; 
       letter-spacing: 0px;
       box-shadow: 0 2px 5px rgba(217, 56, 30, 0.3);
@@ -116,10 +142,10 @@
       background-color: #e0d0cc; 
       border: 1.5px solid #a89491; 
       color: #705856;
-      font-size: 11px; 
+      font-size: 10px; 
       font-weight: 800; 
-      padding: 4px 2px; 
-      border-radius: 6px; 
+      padding: 4px 1px; 
+      border-radius: 5px; 
       flex: 1; 
       text-align: center; 
       white-space: nowrap; 
@@ -129,7 +155,6 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      gap: 2px;
       transition: all 0.15s;
     }
     .badge-date-trash:active {
@@ -138,14 +163,15 @@
       color: #fff;
     }
 
+    /* 마스킹 테이프 (사용완료 & 기간만료 동일 색상) */
     .masking-tape {
       position: absolute;
       top: 50%;
       left: 50%;
-      width: calc(100% * 1.62);
-      height: 36px;
+      width: calc(100% * 1.65);
+      height: 34px;
       transform: translate(-50%, -50%) rotate(-51.5deg);
-      background: rgba(248, 230, 222, 0.95);
+      background: rgba(248, 230, 222, 0.96);
       border: none;
       clip-path: polygon(
         0% 0%, 98% 0%,
@@ -154,7 +180,7 @@
         2.5% 93%, 0.5% 85%, 3% 76%, 0% 67%, 3% 58%, 0.5% 49%, 3% 40%, 0% 31%, 2.5% 23%, 0.5% 15%, 3% 7%
       );
       color: #3b2827;
-      font-size: 13px;
+      font-size: 12px;
       font-weight: 900;
       display: flex;
       align-items: center;
@@ -168,8 +194,8 @@
 
     .btn-restore {
       background: #6e5e5d; color: #fff; border: 1.5px solid #6e5e5d;
-      font-size: 11px; font-weight: 800; padding: 4px 6px;
-      border-radius: 6px; cursor: pointer; white-space: nowrap;
+      font-size: 10px; font-weight: 800; padding: 4px 5px;
+      border-radius: 5px; cursor: pointer; white-space: nowrap;
     }
     .btn-restore:active { background: #4a3e3d; }
 
@@ -194,7 +220,6 @@
       background: #000000;
     }
 
-    /* 원본 사진 엘리먼트 */
     #modalPhoto {
       max-width: 100%;
       max-height: 100%;
@@ -262,8 +287,15 @@
     }
     .trash-view.active { display: flex; }
     .trash-grid {
-      flex: 1; overflow-y: auto; padding: 16px 10px;
-      display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; align-content: start;
+      flex: 1; 
+      overflow-y: auto; 
+      padding: 12px 8px;
+      display: grid; 
+      grid-template-columns: repeat(3, minmax(0, 1fr)); 
+      gap: 8px; 
+      align-content: start;
+      touch-action: pan-y;
+      -webkit-overflow-scrolling: touch;
     }
 
     /* 영구 삭제 확인 팝업 모달 */
@@ -303,6 +335,12 @@
     <div class="auth-box">
       <div class="auth-title"><i class="fa-solid fa-lock"></i> 공유 쿠폰함 비밀번호</div>
       <input type="password" id="pinInput" class="auth-input" maxlength="8" placeholder="••••" />
+      
+      <label class="auth-temp-option">
+        <input type="checkbox" id="tempSessionCheck" />
+        <span>이번에만 임시 사용 (창 닫으면 잠김)</span>
+      </label>
+
       <button class="auth-btn" onclick="checkPin()">입장하기</button>
     </div>
   </div>
@@ -313,13 +351,19 @@
       <i class="fa-regular fa-trash-can"></i>
     </button>
     <span class="header-title">쿠폰함</span>
-    <label class="header-btn" title="쿠폰 추가" for="fileInput">
-      <i class="fa-solid fa-plus"></i>
-      <input type="file" id="fileInput" accept="image/*" multiple style="display: none;" />
-    </label>
+    
+    <div class="header-actions">
+      <button class="header-btn" onclick="lockApp()" title="지금 잠그기 / 로그아웃">
+        <i class="fa-solid fa-lock-open" style="font-size: 20px;"></i>
+      </button>
+      <label class="header-btn" title="쿠폰 추가" for="fileInput">
+        <i class="fa-solid fa-plus"></i>
+        <input type="file" id="fileInput" accept="image/*" multiple style="display: none;" />
+      </label>
+    </div>
   </header>
 
-  <!-- 메인 쿠폰 목록 (3열) -->
+  <!-- 메인 쿠폰 목록 -->
   <main id="couponGrid"></main>
 
   <!-- 바코드 / 원본 사진 자체 줌인 모달 -->
@@ -344,11 +388,11 @@
   <div class="trash-view" id="trashView">
     <header>
       <button class="header-btn" onclick="toggleTrashView()"><i class="fa-solid fa-arrow-left"></i></button>
-      <span class="header-title">사용완료함</span>
+      <span class="header-title">사용완료 / 만료함</span>
       <div style="width: 30px;"></div>
     </header>
     <div style="padding: 10px 14px 0; font-size: 12px; color: #8a7c7a; text-align: center;">
-      💡 사용완료된 쿠폰은 30일 후 자동 삭제되며,<br>날짜 버튼을 누르면 <b>즉시 영구 삭제</b>할 수 있습니다.
+      💡 사용완료 및 만료된 쿠폰은 30일 후 자동 삭제되며,<br>날짜 버튼을 누르면 <b>즉시 영구 삭제</b>할 수 있습니다.
     </div>
     <div class="trash-grid" id="trashGrid"></div>
   </div>
@@ -376,8 +420,15 @@
 
     function checkPin() {
       const input = document.getElementById('pinInput').value;
+      const isTemp = document.getElementById('tempSessionCheck').checked;
+
       if (input === GROUP_PIN) {
-        localStorage.setItem('shared_coupon_auth', 'true');
+        if (isTemp) {
+          sessionStorage.setItem('shared_coupon_auth', 'temp');
+          localStorage.removeItem('shared_coupon_auth');
+        } else {
+          localStorage.setItem('shared_coupon_auth', 'permanent');
+        }
         document.getElementById('authOverlay').style.display = 'none';
       } else {
         alert("비밀번호가 일치하지 않습니다.");
@@ -385,8 +436,19 @@
       }
     }
 
-    if (localStorage.getItem('shared_coupon_auth') === 'true') {
+    const isAuthed = localStorage.getItem('shared_coupon_auth') === 'permanent' || 
+                     sessionStorage.getItem('shared_coupon_auth') === 'temp';
+
+    if (isAuthed) {
       document.getElementById('authOverlay').style.display = 'none';
+    }
+
+    function lockApp() {
+      localStorage.removeItem('shared_coupon_auth');
+      sessionStorage.removeItem('shared_coupon_auth');
+      document.getElementById('pinInput').value = '';
+      document.getElementById('tempSessionCheck').checked = false;
+      document.getElementById('authOverlay').style.display = 'flex';
     }
 
     document.getElementById('pinInput').addEventListener('keyup', (e) => {
@@ -503,11 +565,18 @@
       grid.innerHTML = '';
       trashGrid.innerHTML = '';
 
-      const activeCoupons = allCoupons.filter(c => !c.isUsed);
-      const usedCoupons = allCoupons.filter(c => c.isUsed);
+      const activeCoupons = allCoupons.filter(c => {
+        const diff = getDaysDiff(c.expiryDate);
+        return !c.isUsed && diff >= 0;
+      });
+
+      const trashCoupons = allCoupons.filter(c => {
+        const diff = getDaysDiff(c.expiryDate);
+        return c.isUsed || diff < 0;
+      });
 
       activeCoupons.sort((a, b) => getDaysDiff(a.expiryDate) - getDaysDiff(b.expiryDate));
-      usedCoupons.sort((a, b) => (b.usedTimestamp || 0) - (a.usedTimestamp || 0));
+      trashCoupons.sort((a, b) => (b.usedTimestamp || 0) - (a.usedTimestamp || 0));
 
       activeCoupons.forEach(coupon => {
         const diff = getDaysDiff(coupon.expiryDate);
@@ -535,7 +604,10 @@
         grid.appendChild(card);
       });
 
-      usedCoupons.forEach(coupon => {
+      trashCoupons.forEach(coupon => {
+        const diff = getDaysDiff(coupon.expiryDate);
+        const isExpired = diff < 0;
+
         const item = document.createElement('div');
         item.className = 'coupon-card used';
         
@@ -545,10 +617,13 @@
         const daysLeft = Math.max(0, 30 - daysPassed);
         const autoDeleteText = daysLeft === 0 ? "오늘 자동삭제" : `${daysLeft}일 뒤 삭제 🗑️`;
 
+        // 🌟 사용완료 & 기간만료 모두 기본 살구빛 마스킹 테이프 통일
+        const tapeText = isExpired ? '기간만료' : `${usedDateStr} 완료`;
+
         item.innerHTML = `
           <div class="card-img-box">
             <img src="${coupon.image}" alt="쿠폰" />
-            <div class="masking-tape">${usedDateStr} 완료</div>
+            <div class="masking-tape">${tapeText}</div>
           </div>
           <div class="card-footer">
             <button class="badge-date-trash" onclick="promptPermanentDelete('${coupon.docId}', event)" title="터치 시 즉시 영구 삭제">
@@ -592,11 +667,10 @@
       });
     }
 
-    // 🌟 파일 추가 누락 방지 최적화 (이벤트 분리)
     const fileInput = document.getElementById('fileInput');
     fileInput.addEventListener('change', async (e) => {
       const files = Array.from(e.target.files).slice(0, 10);
-      fileInput.value = ''; // 즉시 초기화하여 다음 번 클릭 시 무조건 반응하도록 설정
+      fileInput.value = '';
       if (!files.length) return;
 
       const loading = document.getElementById('loading');
@@ -628,7 +702,6 @@
       loading.style.display = 'none';
     });
 
-    // 🌟 픽셀 줄무늬 밀집도 분석 엔진 (어떤 쿠폰이든 바코드 Y위치를 정확히 스캔)
     function findBarcodePositionFallback(imgEl) {
       const nw = imgEl.naturalWidth || 800;
       const nh = imgEl.naturalHeight || 1200;
@@ -685,7 +758,6 @@
       }
     }
 
-    // 🌟 원본 사진 자체를 바코드 영역으로 정확하게 줌인
     async function calculatePhotoZoom(imgEl) {
       let box = null;
 
@@ -699,7 +771,6 @@
         } catch (e) {}
       }
 
-      // 바코드 디텍터 실패 시 픽셀 정밀 스캐너 가동
       if (!box || box.width < 50) {
         box = findBarcodePositionFallback(imgEl);
       }
@@ -717,7 +788,6 @@
       const barcodeCenterY = (box.y + box.height / 2) * baseScale;
       const barcodeRenderedW = Math.max(box.width * baseScale, renderedW * 0.4);
 
-      // 바코드가 화면 가로폭(vw - 12px)을 가득 채우도록 배율 계산
       const zoomFactor = Math.min(5.2, (vw - 12) / barcodeRenderedW);
 
       const moveX = ((renderedW / 2) - barcodeCenterX) * zoomFactor;
