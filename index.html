@@ -4,8 +4,9 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
   <title>공유 쿠폰함</title>
-  <!-- OCR, 아이콘, Pretendard 폰트 -->
+  <!-- OCR, JsBarcode, 아이콘, Pretendard 폰트 -->
   <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
   <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
 
@@ -104,14 +105,39 @@
       box-shadow: 0 2px 5px rgba(217, 56, 30, 0.3);
     }
 
+    /* 쓰레기통 카드 스타일 */
     .coupon-card.used {
       border-color: #c9bcba; background: #f5eeea; cursor: default;
     }
     .coupon-card.used .card-img-box img {
       filter: grayscale(100%) opacity(0.3);
     }
-    .coupon-card.used .badge-date {
-      border-color: #9c8e8c; color: #8a7c7a; background-color: transparent; font-weight: 800; font-size: 12px;
+    
+    /* 🌟 쓰레기통 내 날짜 뱃지 (클릭 시 영구삭제 트리거) */
+    .badge-date-trash {
+      background-color: #e0d0cc; 
+      border: 1.5px solid #a89491; 
+      color: #705856;
+      font-size: 11px; 
+      font-weight: 800; 
+      padding: 4px 2px; 
+      border-radius: 6px; 
+      flex: 1; 
+      text-align: center; 
+      white-space: nowrap; 
+      overflow: hidden; 
+      text-overflow: ellipsis;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 2px;
+      transition: all 0.15s;
+    }
+    .badge-date-trash:active {
+      background-color: #d9381e;
+      border-color: #d9381e;
+      color: #fff;
     }
 
     .masking-tape {
@@ -144,126 +170,142 @@
 
     .btn-restore {
       background: #6e5e5d; color: #fff; border: 1.5px solid #6e5e5d;
-      font-size: 12px; font-weight: 800; padding: 4px 8px;
+      font-size: 11px; font-weight: 800; padding: 4px 6px;
       border-radius: 6px; cursor: pointer; white-space: nowrap;
     }
     .btn-restore:active { background: #4a3e3d; }
 
-    /* 바코드 전용 모달 */
+    /* 바코드/원본 모달 */
     .modal {
       display: none; position: fixed; inset: 0; 
-      background: rgba(10, 8, 8, 0.99);
+      background: #000000;
       z-index: 100; flex-direction: column; align-items: center; justify-content: space-between;
-      padding: 14px 8px 24px 8px;
+      padding: 0;
     }
     .modal.active { display: flex; }
     
     .modal-content-area {
-      flex: 1; width: 100%; display: flex; flex-direction: column;
-      align-items: center; justify-content: center; gap: 14px;
-      min-height: 0; overflow-y: auto; padding: 0 4px;
+      position: relative;
+      flex: 1; width: 100%; height: 100%;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      overflow: hidden;
     }
 
-    /* 🌟 바코드 + 번호 초대형 꽉 채움 카드 */
-    .barcode-crop-card {
-      width: 100%;
+    /* 바코드 카드 */
+    .barcode-display-card {
+      width: 100vw;
       background: #ffffff;
-      border-radius: 16px;
-      padding: 20px 8px;
+      padding: 30px 4px 20px;
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      box-shadow: 0 8px 30px rgba(0,0,0,0.8);
+      box-shadow: 0 0 40px rgba(0,0,0,0.9);
     }
 
-    .barcode-crop-card canvas {
+    #barcodeSvg {
+      width: 100% !important;
+      height: 210px !important;
+      display: block;
+    }
+
+    #barcodeCanvas {
       width: 100% !important;
       height: auto !important;
-      max-height: 260px;
-      object-fit: fill; /* 가로 끝까지 꽉 차게 확장 */
-      filter: contrast(1.5) brightness(1.02);
-      image-rendering: -webkit-optimize-contrast;
-      image-rendering: crisp-edges;
+      max-height: 300px;
+      object-fit: contain;
+      display: none;
+      filter: contrast(1.4) brightness(1.02);
     }
 
     .barcode-num-text {
       margin-top: 14px;
-      font-size: 22px;
+      font-size: 26px;
       font-weight: 900;
-      letter-spacing: 3.5px;
+      letter-spacing: 4px;
       color: #000;
       background: #f1eae6;
-      padding: 8px 20px;
+      padding: 8px 24px;
       border-radius: 10px;
       cursor: pointer;
       font-family: monospace, sans-serif;
       text-align: center;
-      border: 1px solid #d5c8c2;
+      border: 2px solid #d5c8c2;
     }
     .barcode-num-text:active { background: #dfd2cc; }
 
     .barcode-notice {
-      font-size: 13px; font-weight: 800; color: #2a9d8f; margin-top: 10px; text-align: center;
+      font-size: 14px; font-weight: 800; color: #2a9d8f; margin-top: 10px; text-align: center;
     }
 
-    /* 원본 전체 쿠폰 보기 박스 */
+    /* 원본 전체 쿠폰 보기 */
     .original-preview-box {
-      width: 100%;
-      max-height: 180px;
+      position: absolute;
+      inset: 0;
+      width: 100vw;
+      height: 100vh;
       display: none;
       justify-content: center;
       align-items: center;
-      background: #000;
-      border-radius: 8px;
-      overflow: hidden;
+      background: #000000;
+      z-index: 105;
     }
     .original-preview-box img {
-      max-width: 100%;
-      max-height: 180px;
+      width: 100%;
+      height: 100%;
       object-fit: contain;
     }
     
     .btn-close-pure-x {
-      position: absolute; top: 8px; right: 8px;
-      background: none; border: none; padding: 12px;
-      cursor: pointer; color: #ffffff; font-size: 34px; font-weight: 900;
-      z-index: 110; display: flex; align-items: center; justify-content: center;
-      filter: drop-shadow(0px 2px 4px rgba(0,0,0,0.8));
+      position: absolute; top: 12px; right: 12px;
+      background: rgba(0,0,0,0.5); border: none; padding: 10px 14px;
+      border-radius: 50%;
+      cursor: pointer; color: #ffffff; font-size: 28px; font-weight: 900;
+      z-index: 120; display: flex; align-items: center; justify-content: center;
+      backdrop-filter: blur(4px);
     }
 
     .modal-bottom-actions {
+      position: absolute;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%);
       display: flex;
       flex-direction: column;
       align-items: center;
-      gap: 8px;
-      width: 100%;
-      max-width: 320px;
-      z-index: 110;
+      gap: 10px;
+      width: calc(100% - 32px);
+      max-width: 360px;
+      z-index: 120;
     }
     
     .btn-toggle-view {
       width: 100%;
-      padding: 11px;
-      border-radius: 20px;
-      border: 1px solid rgba(255,255,255,0.3);
-      font-size: 14px;
+      padding: 13px;
+      border-radius: 24px;
+      border: 1px solid rgba(255,255,255,0.4);
+      font-size: 15px;
       font-weight: 800;
       cursor: pointer;
-      background: #2a9d8f;
+      background: rgba(42, 157, 143, 0.95);
       color: #fff;
       display: flex;
       justify-content: center;
       align-items: center;
-      gap: 6px;
+      gap: 8px;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.6);
+      backdrop-filter: blur(6px);
     }
     
     .btn-use-small {
       width: 100%;
-      padding: 12px 34px; border: none; border-radius: 24px;
+      padding: 13px 34px; border: none; border-radius: 24px;
       font-size: 16px; font-weight: 800; cursor: pointer;
-      background: #4a3e3d; color: #fff; box-shadow: 0 3px 10px rgba(0,0,0,0.4);
-      border: 1px solid rgba(255,255,255,0.2);
+      background: rgba(74, 62, 61, 0.95); color: #fff; 
+      box-shadow: 0 4px 16px rgba(0,0,0,0.6);
+      border: 1px solid rgba(255,255,255,0.25);
+      backdrop-filter: blur(6px);
     }
 
     /* 쓰레기통 3열 뷰 */
@@ -275,6 +317,30 @@
     .trash-grid {
       flex: 1; overflow-y: auto; padding: 16px 10px;
       display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; align-content: start;
+    }
+
+    /* 🌟 커스텀 영구 삭제 확인 팝업 모달 */
+    .confirm-modal-overlay {
+      position: fixed; inset: 0; background: rgba(0, 0, 0, 0.65);
+      display: none; justify-content: center; align-items: center;
+      z-index: 999; padding: 20px;
+    }
+    .confirm-modal-overlay.active { display: flex; }
+    .confirm-card {
+      background: #ffffff; border: 2px solid #4a3e3d; border-radius: 16px;
+      padding: 24px 20px; width: 100%; max-width: 300px; text-align: center;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.25);
+    }
+    .confirm-title { font-size: 18px; font-weight: 900; color: #d9381e; margin-bottom: 8px; }
+    .confirm-desc { font-size: 14px; font-weight: 700; color: #5a4b4a; margin-bottom: 20px; line-height: 1.4; }
+    .confirm-btn-group { display: flex; gap: 8px; }
+    .btn-confirm-yes {
+      flex: 1; padding: 12px; background: #d9381e; color: #fff;
+      border: none; border-radius: 10px; font-size: 15px; font-weight: 900; cursor: pointer;
+    }
+    .btn-confirm-no {
+      flex: 1; padding: 12px; background: #ebe2df; color: #4a3e3d;
+      border: none; border-radius: 10px; font-size: 15px; font-weight: 800; cursor: pointer;
     }
 
     #loading {
@@ -309,21 +375,22 @@
   <!-- 메인 쿠폰 목록 (3열) -->
   <main id="couponGrid"></main>
 
-  <!-- 바코드 전용 모달 -->
+  <!-- 바코드 / 원본 전체보기 전용 모달 -->
   <div class="modal" id="detailModal">
     <button class="btn-close-pure-x" onclick="closeModal()" aria-label="닫기">
       <i class="fa-solid fa-xmark"></i>
     </button>
     
     <div class="modal-content-area">
-      <!-- 1. 바코드 + 바코드 번호 크롭 카드 (가로 100% 꽉 채움) -->
-      <div class="barcode-crop-card" id="barcodeCropCard">
+      <!-- 1. 초고화질 바코드 카드 (기본 뷰) -->
+      <div class="barcode-display-card" id="barcodeDisplayCard">
+        <svg id="barcodeSvg"></svg>
         <canvas id="barcodeCanvas"></canvas>
         <div id="barcodeNumText" class="barcode-num-text" style="display:none;" onclick="copyBarcodeNumber()" title="클릭 시 복사"></div>
         <div class="barcode-notice"><i class="fa-solid fa-barcode"></i> 리더기에 바로 태그하세요</div>
       </div>
 
-      <!-- 2. 원본 전체 쿠폰 보기 박스 -->
+      <!-- 2. 원본 전체 쿠폰 보기 (화면 전체 100% 꽉 참) -->
       <div class="original-preview-box" id="origBox">
         <img id="modalOrigImg" src="" alt="원본 쿠폰">
       </div>
@@ -341,10 +408,25 @@
   <div class="trash-view" id="trashView">
     <header>
       <button class="header-btn" onclick="toggleTrashView()"><i class="fa-solid fa-arrow-left"></i></button>
-      <span class="header-title">사용완료</span>
+      <span class="header-title">사용완료함</span>
       <div style="width: 30px;"></div>
     </header>
+    <div style="padding: 10px 14px 0; font-size: 12px; color: #8a7c7a; text-align: center;">
+      💡 사용완료된 쿠폰은 30일 후 자동 삭제되며,<br>날짜 버튼을 누르면 <b>즉시 영구 삭제</b>할 수 있습니다.
+    </div>
     <div class="trash-grid" id="trashGrid"></div>
+  </div>
+
+  <!-- 🌟 영구 삭제 확인 팝업 모달 (예/아니오) -->
+  <div class="confirm-modal-overlay" id="confirmDeleteModal">
+    <div class="confirm-card">
+      <div class="confirm-title"><i class="fa-solid fa-triangle-exclamation"></i> 영구 삭제</div>
+      <div class="confirm-desc">이 쿠폰을 정말 영구 삭제하시겠습니까?<br><span style="font-size:12px; color:#8a7c7a;">삭제 후에는 복구할 수 없습니다.</span></div>
+      <div class="confirm-btn-group">
+        <button class="btn-confirm-yes" onclick="confirmPermanentDelete()">예 (삭제)</button>
+        <button class="btn-confirm-no" onclick="closeConfirmModal()">아니오</button>
+      </div>
+    </div>
   </div>
 
   <!-- 로딩 오버레이 -->
@@ -354,7 +436,7 @@
   </div>
 
   <script>
-    const GROUP_PIN = "1234";
+    const GROUP_PIN = "0228";
 
     function checkPin() {
       const input = document.getElementById('pinInput').value;
@@ -390,6 +472,7 @@
 
     let allCoupons = [];
     let selectedCouponId = null;
+    let targetDeleteId = null; // 영구 삭제 대상 docId
     let isShowingOriginal = false;
     let currentRawBarcodeValue = "";
 
@@ -428,10 +511,20 @@
       return `${yy}.${mm}.${dd}`;
     }
 
+    // 🌟 30일 경과 자동 영구 삭제 검사 및 렌더링
     db.collection("coupons").onSnapshot((snapshot) => {
       allCoupons = [];
+      const now = Date.now();
+      const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
+
       snapshot.forEach((doc) => {
-        allCoupons.push({ docId: doc.id, ...doc.data() });
+        const data = doc.data();
+        // 30일 지난 쓰레기통 항목은 백그라운드 자동 삭제
+        if (data.isUsed && data.usedTimestamp && (now - data.usedTimestamp > THIRTY_DAYS_MS)) {
+          db.collection("coupons").doc(doc.id).delete();
+        } else {
+          allCoupons.push({ docId: doc.id, ...data });
+        }
       });
       render();
     });
@@ -474,13 +567,18 @@
         grid.appendChild(card);
       });
 
+      // 🌟 쓰레기통 카드 렌더링 (자동삭제 카운트다운 및 즉시삭제 뱃지 연동)
       usedCoupons.forEach(coupon => {
         const item = document.createElement('div');
         item.className = 'coupon-card used';
         
-        const shortDate = formatDateToShort(coupon.expiryDate);
-        const dateDisplay = shortDate ? `${shortDate}까지` : '기한 미정';
         const usedDateStr = coupon.usedDate || getTodayFormatted();
+        
+        // 30일 중 남은 일수 계산
+        const usedTime = coupon.usedTimestamp || Date.now();
+        const daysPassed = Math.floor((Date.now() - usedTime) / (1000 * 60 * 60 * 24));
+        const daysLeft = Math.max(0, 30 - daysPassed);
+        const autoDeleteText = daysLeft === 0 ? "오늘 자동삭제" : `${daysLeft}일 뒤 삭제 🗑️`;
 
         item.innerHTML = `
           <div class="card-img-box">
@@ -488,7 +586,9 @@
             <div class="masking-tape">${usedDateStr} 완료</div>
           </div>
           <div class="card-footer">
-            <span class="badge-date">${dateDisplay}</span>
+            <button class="badge-date-trash" onclick="promptPermanentDelete('${coupon.docId}', event)" title="터치 시 즉시 영구 삭제">
+              ${autoDeleteText}
+            </button>
             <button class="btn-restore" onclick="restoreCoupon('${coupon.docId}')">복구</button>
           </div>
         `;
@@ -505,7 +605,7 @@
             const canvas = document.createElement('canvas');
             let width = img.width;
             let height = img.height;
-            const maxDimension = 1200;
+            const maxDimension = 1400;
 
             if (width > height && width > maxDimension) {
               height *= maxDimension / width;
@@ -519,7 +619,7 @@
             canvas.height = height;
             const ctx = canvas.getContext('2d');
             ctx.drawImage(img, 0, 0, width, height);
-            resolve(canvas.toDataURL('image/jpeg', 0.85));
+            resolve(canvas.toDataURL('image/jpeg', 0.9));
           };
           img.src = e.target.result;
         };
@@ -561,138 +661,89 @@
       e.target.value = '';
     });
 
-    // 🌟 타이트 크롭(Tight-crop): 바코드 막대 좌우의 불필요한 공백을 완전히 깎아내고 바코드만 가로폭 최대로 추출
-    function tightCropBarcodeRegion(img, rawBox) {
-      const nw = img.naturalWidth;
-      const nh = img.naturalHeight;
-      const offCanvas = document.createElement('canvas');
-      offCanvas.width = nw;
-      offCanvas.height = nh;
-      const offCtx = offCanvas.getContext('2d');
-      offCtx.drawImage(img, 0, 0);
-
-      let cropX = 0, cropY = 0, cropW = nw, cropH = nh;
-
-      if (rawBox) {
-        // 감지된 바코드 박스 기준
-        cropX = Math.max(0, rawBox.x - 5);
-        cropY = Math.max(0, rawBox.y - 5);
-        cropW = Math.min(nw - cropX, rawBox.width + 10);
-        // 바코드 바로 밑 번호 텍스트까지 포함하도록 아래로 확장
-        cropH = Math.min(nh - cropY, rawBox.height * 1.55);
-      } else {
-        // 미감지 시 정밀 픽셀 라인 스캔 (가장 줄무늬 변화가 심한 Y구간 탐색)
-        const stepY = 3;
-        const imgData = offCtx.getImageData(0, 0, nw, nh).data;
-        const rowScores = new Array(Math.floor(nh / stepY)).fill(0);
-
-        for (let row = 0; row < rowScores.length; row++) {
-          const y = row * stepY;
-          let transitions = 0;
-          let prevLum = null;
-
-          for (let x = 0; x < nw; x += 4) {
-            const idx = (y * nw + x) * 4;
-            const lum = 0.299 * imgData[idx] + 0.587 * imgData[idx + 1] + 0.114 * imgData[idx + 2];
-            if (prevLum !== null && Math.abs(lum - prevLum) > 40) transitions++;
-            prevLum = lum;
-          }
-          rowScores[row] = transitions;
-        }
-
-        let maxScore = 0;
-        let bestRow = Math.floor(rowScores.length * 0.45);
-        const windowSize = Math.floor(rowScores.length * 0.15);
-
-        for (let i = 0; i <= rowScores.length - windowSize; i++) {
-          let sum = 0;
-          for (let j = 0; j < windowSize; j++) sum += rowScores[i + j];
-          if (sum > maxScore) {
-            maxScore = sum;
-            bestRow = i;
-          }
-        }
-
-        const foundY = bestRow * stepY;
-        const foundH = windowSize * stepY;
-
-        cropX = 0;
-        cropY = Math.max(0, foundY - 10);
-        cropW = nw;
-        cropH = Math.min(nh - cropY, foundH + nh * 0.14);
-      }
-
-      // 🌟 좌우 흑백 막대 경계 정밀 타이트닝 (좌우 빈 여백 잘라내기)
-      try {
-        const barcodeData = offCtx.getImageData(cropX, cropY, cropW, cropH).data;
-        let minX = cropW, maxX = 0;
-
-        for (let y = 0; y < cropH; y += 4) {
-          for (let x = 0; x < cropW; x += 2) {
-            const idx = (y * cropW + x) * 4;
-            const lum = 0.299 * barcodeData[idx] + 0.587 * barcodeData[idx + 1] + 0.114 * barcodeData[idx + 2];
-            // 어두운 바코드 막대 픽셀 발견 시
-            if (lum < 110) {
-              if (x < minX) minX = x;
-              if (x > maxX) maxX = x;
-            }
-          }
-        }
-
-        if (maxX > minX && (maxX - minX) > cropW * 0.4) {
-          const pad = Math.max(8, (maxX - minX) * 0.03);
-          const finalX = Math.max(0, cropX + minX - pad);
-          const finalW = Math.min(nw - finalX, (maxX - minX) + pad * 2);
-          cropX = finalX;
-          cropW = finalW;
-        }
-      } catch (e) {}
-
-      return { x: cropX, y: cropY, width: cropW, height: cropH };
-    }
-
-    async function cropBarcodeAndNumber(base64Image) {
+    async function renderUltraCleanBarcode(base64Image) {
       const img = new Image();
       img.src = base64Image;
       await new Promise(r => img.onload = r);
 
-      const canvas = document.getElementById('barcodeCanvas');
-      const ctx = canvas.getContext('2d');
+      const svgEl = document.getElementById('barcodeSvg');
+      const canvasEl = document.getElementById('barcodeCanvas');
       const numTextEl = document.getElementById('barcodeNumText');
 
+      let detectedValue = "";
       let box = null;
-      currentRawBarcodeValue = "";
 
       if ('BarcodeDetector' in window) {
         try {
           const detector = new BarcodeDetector();
           const barcodes = await detector.detect(img);
           if (barcodes.length > 0) {
-            const b = barcodes[0];
-            box = b.boundingBox;
-            if (b.rawValue) currentRawBarcodeValue = b.rawValue;
+            detectedValue = barcodes[0].rawValue || "";
+            box = barcodes[0].boundingBox;
           }
         } catch (e) {}
       }
 
-      const tightRegion = tightCropBarcodeRegion(img, box);
+      const cleanNumber = detectedValue.replace(/\D/g, '');
 
-      canvas.width = tightRegion.width;
-      canvas.height = tightRegion.height;
-      ctx.drawImage(img, tightRegion.x, tightRegion.y, tightRegion.width, tightRegion.height, 0, 0, tightRegion.width, tightRegion.height);
+      if (cleanNumber && cleanNumber.length >= 8) {
+        currentRawBarcodeValue = cleanNumber;
+        svgEl.style.display = 'block';
+        canvasEl.style.display = 'none';
 
-      if (currentRawBarcodeValue) {
-        numTextEl.innerText = currentRawBarcodeValue;
+        try {
+          JsBarcode(svgEl, cleanNumber, {
+            format: "CODE128",
+            lineColor: "#000000",
+            width: 3.6,
+            height: 140,
+            displayValue: false,
+            margin: 0
+          });
+        } catch (e) {
+          JsBarcode(svgEl, cleanNumber, { displayValue: false, margin: 0, width: 3.4, height: 135 });
+        }
+
+        numTextEl.innerText = cleanNumber.replace(/(\d{4})(?=\d)/g, '$1 ');
         numTextEl.style.display = 'block';
-      } else {
-        numTextEl.style.display = 'none';
+        return;
       }
+
+      svgEl.style.display = 'none';
+      canvasEl.style.display = 'block';
+
+      const nw = img.naturalWidth;
+      const nh = img.naturalHeight;
+
+      let cropX, cropY, cropW, cropH;
+      if (box) {
+        cropX = Math.max(0, box.x - 8);
+        cropY = Math.max(0, box.y - 8);
+        cropW = Math.min(nw - cropX, box.width + 16);
+        cropH = Math.min(nh - cropY, box.height * 1.55);
+      } else {
+        cropX = 0;
+        cropY = nh * 0.35;
+        cropW = nw;
+        cropH = nh * 0.30;
+      }
+
+      const ctx = canvasEl.getContext('2d');
+      const dpr = window.devicePixelRatio || 2;
+      canvasEl.width = cropW * dpr;
+      canvasEl.height = cropH * dpr;
+      ctx.scale(dpr, dpr);
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = 'high';
+
+      ctx.drawImage(img, cropX, cropY, cropW, cropH, 0, 0, cropW, cropH);
+      numTextEl.style.display = 'none';
     }
 
     function copyBarcodeNumber() {
       if (!currentRawBarcodeValue) return;
       navigator.clipboard.writeText(currentRawBarcodeValue);
-      alert(`쿠폰 번호가 복사되었습니다:\n${currentRawBarcodeValue}`);
+      alert(`바코드 번호가 복사되었습니다:\n${currentRawBarcodeValue}`);
     }
 
     async function openDetail(id) {
@@ -702,9 +753,10 @@
 
       document.getElementById('modalOrigImg').src = coupon.image;
       
-      await cropBarcodeAndNumber(coupon.image);
+      await renderUltraCleanBarcode(coupon.image);
 
       isShowingOriginal = false;
+      document.getElementById('barcodeDisplayCard').style.display = 'flex';
       document.getElementById('origBox').style.display = 'none';
       document.getElementById('btnToggleView').innerHTML = `<i class="fa-solid fa-image"></i> 원본 쿠폰 전체 보기`;
 
@@ -713,14 +765,17 @@
     }
 
     function toggleOriginalView() {
+      const barcodeCard = document.getElementById('barcodeDisplayCard');
       const origBox = document.getElementById('origBox');
       const btn = document.getElementById('btnToggleView');
 
       if (!isShowingOriginal) {
+        barcodeCard.style.display = 'none';
         origBox.style.display = 'flex';
-        btn.innerHTML = `<i class="fa-solid fa-barcode"></i> 바코드만 꽉 채워 보기`;
+        btn.innerHTML = `<i class="fa-solid fa-barcode"></i> 바코드만 크게 보기`;
         isShowingOriginal = true;
       } else {
+        barcodeCard.style.display = 'flex';
         origBox.style.display = 'none';
         btn.innerHTML = `<i class="fa-solid fa-image"></i> 원본 쿠폰 전체 보기`;
         isShowingOriginal = false;
@@ -742,8 +797,11 @@
     window.addEventListener('popstate', () => {
       const modal = document.getElementById('detailModal');
       const trashView = document.getElementById('trashView');
+      const confirmModal = document.getElementById('confirmDeleteModal');
       
-      if (modal.classList.contains('active')) {
+      if (confirmModal.classList.contains('active')) {
+        closeConfirmModal();
+      } else if (modal.classList.contains('active')) {
         closeModal(true);
       } else if (trashView.classList.contains('active')) {
         toggleTrashView(true);
@@ -767,6 +825,24 @@
         usedDate: null,
         usedTimestamp: null
       });
+    }
+
+    // 🌟 영구 삭제 팝업 트리거 및 승인 로직
+    function promptPermanentDelete(id, event) {
+      if (event) event.stopPropagation();
+      targetDeleteId = id;
+      document.getElementById('confirmDeleteModal').classList.add('active');
+    }
+
+    function closeConfirmModal() {
+      targetDeleteId = null;
+      document.getElementById('confirmDeleteModal').classList.remove('active');
+    }
+
+    async function confirmPermanentDelete() {
+      if (!targetDeleteId) return;
+      await db.collection("coupons").doc(targetDeleteId).delete();
+      closeConfirmModal();
     }
 
     function toggleTrashView(isHistoryBack = false) {
